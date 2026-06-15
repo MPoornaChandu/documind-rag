@@ -1,42 +1,69 @@
-# DocuMind RAG
+# DocuMind RAG — OCR-powered Document Chat App
 
-DocuMind RAG is a premium full-stack document chat app that lets users upload a PDF, ask questions, and receive answers grounded strictly in the uploaded document with chunk-level source citations.
+An OCR-first Retrieval-Augmented Generation application that lets users upload PDFs and ask questions answered from retrieved document chunks with source citations.
 
-![DocuMind RAG screenshot placeholder](./public/images/documind-portal.png)
+![DocuMind RAG preview](./public/images/documind-portal.png)
 
-Live demo: _Add your deployed Vercel URL here._
+## Live Demo
+
+- Live app: [https://documind-rag.vercel.app](https://documind-rag.vercel.app)
+- App workspace: [https://documind-rag.vercel.app/app](https://documind-rag.vercel.app/app)
+- GitHub repository: [https://github.com/MPoornaChandu/documind-rag](https://github.com/MPoornaChandu/documind-rag)
 
 ## Problem Statement
 
-Most chatbots rely on general knowledge. DocuMind RAG answers strictly from your uploaded document with chunk-level source citations.
+Most AI chatbots answer from general knowledge. Real companies need AI systems that can understand private documents, scanned files, resumes, reports, invoices, and internal PDFs. DocuMind RAG solves this by combining Gemini OCR, vector embeddings, Supabase pgvector retrieval, and source-grounded answers.
 
 ## Features
 
 - PDF upload
-- Text extraction
-- Sentence-aware chunking
-- Gemini embeddings
-- Supabase pgvector storage
-- Semantic search
-- Strict document-only answers
+- Gemini OCR document extraction
+- Text sanitization and readability checks
+- Chunking
+- 768-dimensional Gemini embeddings
+- Supabase pgvector semantic search
+- Source-grounded answers
 - Source citations
-- Futuristic animated UI
+- Dark premium UI
+- Vercel deployment
+- Timeout/error handling
 
 ## Tech Stack
 
-- Next.js 14 App Router
-- TypeScript strict mode
+- Next.js App Router
+- TypeScript
+- Gemini OCR with `gemini-2.5-flash`
+- Gemini embeddings with `gemini-embedding-2`
+- Supabase PostgreSQL
+- pgvector
 - Tailwind CSS
-- Supabase PostgreSQL with pgvector
-- Gemini API through `@google/genai`
-- `gemini-2.5-flash` for answers
-- `gemini-embedding-2` with 768 dimensions for embeddings
-- `pdf-parse` for PDF text extraction
-- Framer Motion, GSAP, and lucide-react for the interface
+- Framer Motion and GSAP
+- Vercel
 
-## Architecture Flow
+## Architecture
 
-PDF Upload -> Text Extraction -> Chunking -> Embeddings -> pgvector Storage -> Semantic Search -> Gemini Answer
+PDF Upload → Gemini OCR → Text Sanitization → Chunking → Gemini Embeddings → Supabase pgvector → Semantic Retrieval → Gemini Answer + Sources
+
+## How It Works
+
+1. A user uploads a PDF through the app workspace.
+2. Gemini OCR extracts readable text from the PDF.
+3. The extracted text is sanitized to remove invalid Unicode/control characters.
+4. Readability checks prevent bad OCR output from being indexed.
+5. The clean text is split into chunks.
+6. Each chunk is embedded with Gemini into a 768-dimensional vector.
+7. Chunks and embeddings are stored in Supabase with pgvector.
+8. User questions are embedded and matched against document chunks.
+9. Gemini answers only from retrieved context and returns source chunks.
+
+## Setup Locally
+
+```bash
+npm install
+npm run dev
+```
+
+Open [http://localhost:3000](http://localhost:3000).
 
 ## Supabase Setup
 
@@ -44,12 +71,13 @@ PDF Upload -> Text Extraction -> Chunking -> Embeddings -> pgvector Storage -> S
 2. Open the SQL editor.
 3. Run `supabase/schema.sql`.
 4. Copy the project URL and service role key.
+5. Add the values to `.env.local`.
 
-The service role key is used only in server-side code and must never be exposed to the browser.
+The service role key is used only in server-side API routes and must never be exposed in client components.
 
-## Environment Setup
+## Environment Variables
 
-Copy `.env.example` to `.env.local` and fill in:
+Create `.env.local`:
 
 ```bash
 GEMINI_API_KEY=
@@ -57,44 +85,32 @@ NEXT_PUBLIC_SUPABASE_URL=
 SUPABASE_SERVICE_ROLE_KEY=
 ```
 
-## Run Locally
+Important security note: `SUPABASE_SERVICE_ROLE_KEY` must stay server-side only. Do not import it into client components or expose it through `NEXT_PUBLIC_` variables.
 
-```bash
-npm install
-npm run dev
-```
+## Deployment
 
-Open `http://localhost:3000`.
-
-## Build
-
-```bash
-npm run build
-npx tsc --noEmit
-```
-
-## Deploy To Vercel
-
-1. Push the project to GitHub.
-2. Import the repository in Vercel.
+1. Push the repository to GitHub.
+2. Import the project into Vercel.
 3. Add `GEMINI_API_KEY`, `NEXT_PUBLIC_SUPABASE_URL`, and `SUPABASE_SERVICE_ROLE_KEY` in Vercel project settings.
 4. Deploy.
 
 ## Known Limitations
 
-- Scanned or image-based PDFs need OCR, planned later.
-- Large PDFs may hit serverless timeout limits.
-- This MVP supports one active document at a time in the UI.
+- Current demo indexes the first few readable chunks for fast testing.
+- Very blurry/scanned PDFs may still fail OCR.
+- No user authentication yet.
+- No persistent chat history yet.
 
 ## Future Improvements
 
+- Full-document background indexing
 - Multi-document collections
-- OCR support
-- Streaming responses
-- User auth
+- User authentication
+- Streaming answers
+- Highlight source pages
 - Chat history
-- Highlight exact PDF source pages
+- RLS policies for production multi-user use
 
 ## Resume Bullet
 
-Built DocuMind RAG, a full-stack Retrieval-Augmented Generation application using Next.js 14, Supabase pgvector, and Gemini API that lets users upload PDFs and ask questions answered strictly from document context with chunk-level source citations.
+Built DocuMind RAG, an OCR-powered Retrieval-Augmented Generation app using Next.js, Gemini OCR, Gemini embeddings, Supabase pgvector, and Vercel, enabling users to upload PDFs and ask source-grounded questions over retrieved document chunks.
