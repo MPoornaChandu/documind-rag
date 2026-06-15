@@ -1,0 +1,72 @@
+import { extractTextFromPdfWithGemini } from "@/lib/gemini"
+import { countReadableWords, getReadableTextScore } from "@/lib/textQuality"
+import { sanitizeTextForDatabase } from "@/lib/textSanitizer"
+import { withTimeout } from "@/lib/timeout"
+
+export const runtime = "nodejs"
+export const maxDuration = 60
+
+const MAX_FILE_SIZE = 10 * 1024 * 1024
+
+function isPdf(file: File) {
+  return file.type === "application/pdf" || file.name.toLowerCase().endsWith(".pdf")
+}
+
+export async function POST(request: Request) {
+  try {
+    const formData = await request.formData()
+    const file = formData.get("file")
+
+    if (!(file instanceof File)) {
+      return Response.json({ success: false, error: "Please upload a valid PDF file." }, { status: 400 })
+    }
+
+    if (!isPdf(file)) {
+      return Response.json({ success: false, error: "Please upload a PDF file." }, { status: 415 })
+    }
+
+    if (file.size > MAX_FILE_SIZE) {
+      return Response.json({ success: false, error: "File too large. Please upload a PDF under 10MB." }, { status: 413 })
+    }
+
+    if (!process.env.GEMINI_API_KEY) {
+      return Response.json(
+        {
+          success: false,
+          error:
+            "Missing environment variables. Check GEMINI_API_KEY, NEXT_PUBLIC_SUPABASE_URL, and SUPABASE_SERVICE_ROLE_KEY.",
+        },
+        { status: 500 },
+      )
+    }
+
+    const buffer = Buffer.from(await file.arrayBuffer())
+    const rawText = await withTimeout(
+      extractTextFromPdfWithGemini(buffer, file.name),
+      60000,
+      "Gemini OCR timed out. Try a smaller or clearer PDF.",
+    )
+    const extractedText = sanitizeTextForDatabase(rawText)
+    const score = getReadableTextScore(extractedText)
+    const words = countReadableWords(extractedText)
+
+    return Response.json({
+      success: true,
+      method: "gemini-ocr",
+      length: extractedText.length,
+      score,
+      words,
+      preview: extractedText.slice(0, 1000),
+    })
+  } catch (error) {
+    console.error("DEBUG_OCR_ROUTE_ERROR", error)
+
+    return Response.json(
+      {
+        success: false,
+        error: error instanceof Error ? error.message : "OCR debug failed",
+      },
+      { status: 400 },
+    )
+  }
+}
