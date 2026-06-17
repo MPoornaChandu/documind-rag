@@ -8,25 +8,25 @@ import { withTimeout } from "@/lib/timeout"
 export const runtime = "nodejs"
 export const maxDuration = 60
 
-const MVP_CHUNK_LIMIT = 8
+const DEMO_CHUNK_LIMIT = 8
 const EMBEDDING_DIMENSIONS = 768
 const SAMPLE_DOCUMENT = `
-DocuMind RAG is an AI document chat app that lets users upload PDFs and ask questions using Gemini embeddings, Supabase pgvector, semantic search, and source-backed answers.
-It allows users to upload PDFs and ask questions about the document.
-It uses text extraction, chunking, Gemini embeddings, Supabase pgvector, semantic search, and Gemini answers.
-The project is useful for AI internships because RAG is an in-demand skill.
+DocuMind RAG is an OCR-powered AI document chat app that lets users upload PDFs and ask questions using Gemini OCR, Gemini embeddings, Supabase pgvector, semantic retrieval, and source-backed answers.
+It allows users to upload PDFs, extract readable text, and ask questions about the document.
+It uses OCR extraction, text cleaning, chunking, Gemini embeddings, Supabase pgvector, semantic retrieval, and Gemini answers with source citations.
+The project is useful for AI internships because OCR-powered RAG is an in-demand AI engineering skill.
 
-DocuMind RAG accepts readable text documents, splits the content into chunks, creates Gemini embeddings,
-stores those vectors in Supabase pgvector, and retrieves the most relevant source chunks before asking Gemini
-to answer. The system is designed to avoid unsupported claims by grounding answers in retrieved passages.
+DocuMind RAG accepts PDFs, runs Gemini OCR, sanitizes the extracted text, splits the content into chunks,
+creates Gemini embeddings, stores those vectors in Supabase pgvector, and retrieves the most relevant source
+chunks before asking Gemini to answer. The system is designed to avoid unsupported claims by grounding answers
+in retrieved passages.
 
-The upload pipeline validates PDF type and size, extracts text, sanitizes unsafe characters,
-checks readability, chunks the clean text, embeds each chunk, and stores only readable content.
-If a PDF is scanned, image-based, exported from a design tool, or encoded in a way that produces
-garbage characters, DocuMind rejects it instead of indexing broken text.
+The upload pipeline validates PDF type and size, runs OCR, sanitizes unsafe characters, checks readability,
+chunks the clean text, embeds each chunk, and stores only readable content. If a PDF is too blurry or OCR
+cannot recover readable text, DocuMind rejects it instead of indexing broken text.
 
-Good demo questions include: What does DocuMind do? How does the upload pipeline work? Why does
-the app reject unreadable PDFs? What database feature stores vectors? How does the assistant keep
+Good demo questions include: What does DocuMind do? How does the upload pipeline work? What happens
+if OCR cannot recover readable text? What database feature stores vectors? How does the assistant keep
 answers grounded in source text?
 `
 
@@ -51,7 +51,7 @@ export async function POST() {
         content: sanitizeTextForDatabase(chunk.content),
       }))
       .filter((chunk) => chunk.content.length > 20 && isReadableExtractedText(chunk.content))
-      .slice(0, MVP_CHUNK_LIMIT)
+      .slice(0, DEMO_CHUNK_LIMIT)
 
     if (cleanChunks.length === 0) {
       return Response.json({ success: false, error: "Demo document chunks could not be created." }, { status: 500 })
@@ -80,10 +80,7 @@ export async function POST() {
         code: documentError.code,
       })
 
-      return Response.json(
-        { success: false, error: `Supabase demo document insert failed: ${documentError.message}` },
-        { status: 500 },
-      )
+      return Response.json({ success: false, error: "Vector storage failed. Please retry." }, { status: 500 })
     }
 
     documentId = document.id
@@ -133,10 +130,7 @@ export async function POST() {
 
       await supabase.from("documents").delete().eq("id", document.id)
 
-      return Response.json(
-        { success: false, error: `Supabase demo chunks insert failed: ${chunksError.message}` },
-        { status: 500 },
-      )
+      return Response.json({ success: false, error: "Vector storage failed. Please retry." }, { status: 500 })
     }
 
     return Response.json({
@@ -152,12 +146,6 @@ export async function POST() {
 
     console.error("DEMO_DOCUMENT_ROUTE_ERROR:", error)
 
-    return Response.json(
-      {
-        success: false,
-        error: error instanceof Error ? error.message : "Could not create demo document.",
-      },
-      { status: 500 },
-    )
+    return Response.json({ success: false, error: "Vector storage failed. Please retry." }, { status: 500 })
   }
 }

@@ -19,6 +19,37 @@ function createMessageId() {
   return typeof crypto !== "undefined" && "randomUUID" in crypto ? crypto.randomUUID() : `${Date.now()}-${Math.random()}`
 }
 
+function normalizeChatErrorMessage(message: string) {
+  const lowerMessage = message.toLowerCase()
+
+  if (lowerMessage.includes("vector search failed")) {
+    return "Vector search failed. Please try re-uploading the document."
+  }
+
+  if (lowerMessage.includes("could not find relevant information") || lowerMessage.includes("could not find relevant chunks")) {
+    return "I could not find relevant information in the uploaded document for this question. Try asking about the document summary, key points, dates, skills, or requirements."
+  }
+
+  if (lowerMessage.includes("could not find this information")) {
+    return "I could not find this information in the uploaded document."
+  }
+
+  if (lowerMessage.includes("ai response was empty")) {
+    return "I found relevant document sections, but the AI response was empty. Please try again."
+  }
+
+  if (
+    lowerMessage.includes("gemini") ||
+    lowerMessage.includes("quota") ||
+    lowerMessage.includes("rate") ||
+    lowerMessage.includes("timed out")
+  ) {
+    return "Gemini response failed. Please try again in a moment."
+  }
+
+  return message || "Gemini response failed. Please try again in a moment."
+}
+
 export function ChatPanel({ documentId, documentName, totalChunks }: ChatPanelProps) {
   const [messages, setMessages] = useState<Message[]>([])
   const [input, setInput] = useState("")
@@ -58,10 +89,24 @@ export function ChatPanel({ documentId, documentName, totalChunks }: ChatPanelPr
         },
         body: JSON.stringify({ question, documentId }),
       })
-      const data = (await response.json()) as ChatResponse
+      let data: ChatResponse
+
+      try {
+        data = (await response.json()) as ChatResponse
+      } catch {
+        data = {
+          answer: "",
+          sources: [],
+          error: "Gemini response failed. Please try again in a moment.",
+        }
+      }
 
       if (!response.ok) {
-        throw new Error(data.error || "Could not answer this question. Please try again.")
+        throw new Error(data.error || "Gemini response failed. Please try again in a moment.")
+      }
+
+      if (!data.answer) {
+        throw new Error(data.error || "Gemini response failed. Please try again in a moment.")
       }
 
       setMessages((current) => [
@@ -70,7 +115,7 @@ export function ChatPanel({ documentId, documentName, totalChunks }: ChatPanelPr
           id: createMessageId(),
           role: "assistant",
           content: data.answer,
-          sources: data.sources,
+          sources: data.sources ?? [],
           timestamp: new Date(),
         },
       ])
@@ -79,8 +124,8 @@ export function ChatPanel({ documentId, documentName, totalChunks }: ChatPanelPr
         chatError instanceof TypeError
           ? "Network error. Please check that the local dev server is running and try again."
           : chatError instanceof Error
-            ? chatError.message
-            : "Could not answer this question. Please try again."
+            ? normalizeChatErrorMessage(chatError.message)
+            : "Gemini response failed. Please try again in a moment."
       setError(message)
       setMessages((current) => [
         ...current,
@@ -105,15 +150,18 @@ export function ChatPanel({ documentId, documentName, totalChunks }: ChatPanelPr
 
   return (
     <GlassCard className="flex min-h-[42rem] flex-col overflow-hidden">
-      <div className="flex items-center justify-between gap-4 border-b border-white/10 p-5">
+      <div className="flex items-center justify-between gap-4 border-b border-white/[0.12] p-5">
         <div className="flex min-w-0 items-center gap-3">
-          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-cyan-300/10 text-cyan-100">
+          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-[#BA3AD3]/10 text-[#F69CEB] shadow-glow">
             <FileText className="h-5 w-5" />
           </div>
           <div className="min-w-0">
+            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[#F69CEB]">Vector workspace</p>
             <p className="truncate font-semibold text-white">{documentName ?? "Uploaded document"}</p>
-            <p className="text-xs text-slate-400">
-              {totalChunks ? `${totalChunks} chunks indexed for source-backed answers` : "Ask grounded questions with source citations"}
+            <p className="text-xs text-[#A7A7C7]">
+              {totalChunks
+                ? `${totalChunks} chunks indexed for source-grounded chat`
+                : "Ask grounded questions with source citations"}
             </p>
           </div>
         </div>
@@ -129,23 +177,23 @@ export function ChatPanel({ documentId, documentName, totalChunks }: ChatPanelPr
         ))}
         {isLoading ? (
           <div className="flex items-center gap-3 text-sm text-slate-300">
-            <div className="flex h-9 w-9 items-center justify-center rounded-2xl border border-cyan-300/25 bg-cyan-400/10">
+            <div className="flex h-9 w-9 items-center justify-center rounded-lg border border-[#F69CEB]/25 bg-[#BA3AD3]/10 shadow-glow">
               <LoadingDots />
             </div>
-            Searching chunks and asking Gemini
+            Retrieving source chunks and asking Gemini
           </div>
         ) : null}
         <div ref={bottomRef} />
       </div>
 
       {error ? (
-        <div className="mx-5 mb-4 flex gap-3 rounded-2xl border border-red-400/20 bg-red-500/10 p-3 text-sm text-red-100">
+        <div className="mx-5 mb-4 flex gap-3 rounded-lg border border-red-400/20 bg-red-500/10 p-3 text-sm text-red-100">
           <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
           {error}
         </div>
       ) : null}
 
-      <div className="border-t border-white/10 p-5">
+      <div className="border-t border-white/[0.12] p-5">
         <div className="flex gap-3">
           <textarea
             value={input}
@@ -154,14 +202,14 @@ export function ChatPanel({ documentId, documentName, totalChunks }: ChatPanelPr
             disabled={isLoading}
             rows={2}
             maxLength={1000}
-            placeholder="Ask a question about the uploaded PDF..."
-            className="min-h-12 flex-1 resize-none rounded-2xl border border-white/10 bg-black/25 px-4 py-3 text-sm text-white outline-none transition placeholder:text-slate-500 focus:border-cyan-300/50 focus:ring-2 focus:ring-cyan-300/10 disabled:opacity-60"
+            placeholder="Ask a source-grounded question about the uploaded PDF..."
+            className="min-h-12 flex-1 resize-none rounded-lg border border-white/[0.12] bg-black/30 px-4 py-3 text-sm text-white outline-none transition placeholder:text-slate-500 focus:border-[#F69CEB]/55 focus:ring-2 focus:ring-[#BA3AD3]/20 disabled:opacity-60"
           />
           <button
             type="button"
             onClick={() => void sendQuestion()}
             disabled={isLoading || !input.trim()}
-            className="flex h-12 shrink-0 items-center justify-center gap-2 rounded-2xl bg-blue-500 px-4 text-sm font-bold text-white shadow-glow transition hover:bg-blue-400 disabled:opacity-50"
+            className="flex h-12 shrink-0 items-center justify-center gap-2 rounded-lg bg-gradient-to-br from-[#5C14BB] to-[#BA3AD3] px-4 text-sm font-bold text-white shadow-glow transition hover:brightness-110 disabled:opacity-50"
             aria-label="Ask AI"
           >
             <SendHorizontal className="h-5 w-5" />

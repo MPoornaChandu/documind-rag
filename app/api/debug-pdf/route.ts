@@ -13,6 +13,10 @@ function isPdf(file: File) {
 }
 
 export async function POST(request: Request) {
+  if (process.env.NODE_ENV === "production") {
+    return Response.json({ error: "Debug route disabled in production." }, { status: 403 })
+  }
+
   try {
     const formData = await request.formData()
     const file = formData.get("file")

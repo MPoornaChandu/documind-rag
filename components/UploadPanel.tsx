@@ -32,6 +32,37 @@ function validatePdf(file: File) {
   return null
 }
 
+function normalizeUploadErrorMessage(message: string) {
+  const lowerMessage = message.toLowerCase()
+
+  if (lowerMessage.includes("gemini ocr timed out")) {
+    return "Gemini OCR timed out. Try a smaller or clearer PDF."
+  }
+
+  if (
+    lowerMessage.includes("no readable") ||
+    lowerMessage.includes("not readable enough") ||
+    lowerMessage.includes("readable chunks")
+  ) {
+    return "No readable text could be extracted. Try a clearer PDF."
+  }
+
+  if (
+    lowerMessage.includes("supabase") ||
+    lowerMessage.includes("vector") ||
+    lowerMessage.includes("embedding") ||
+    lowerMessage.includes("insert failed")
+  ) {
+    return "Vector storage failed. Please retry."
+  }
+
+  if (lowerMessage.includes("timed out") || lowerMessage.includes("abort")) {
+    return "Upload took too long. Try a smaller PDF."
+  }
+
+  return message || "Could not process this PDF. Please try again."
+}
+
 function getUploadErrorMessage(error: unknown) {
   if (error instanceof Error && error.name === "AbortError") {
     return "Upload took too long. Try a smaller PDF."
@@ -42,7 +73,7 @@ function getUploadErrorMessage(error: unknown) {
   }
 
   if (error instanceof Error) {
-    return error.message
+    return normalizeUploadErrorMessage(error.message)
   }
 
   return "Could not process this PDF. Please try again."
@@ -211,13 +242,17 @@ export function UploadPanel({ onUploadComplete, onUploadFailed, documentName, to
   }
 
   return (
-    <GlassCard className="p-5 sm:p-6">
+    <GlassCard className="relative overflow-hidden p-5 sm:p-6">
+      <div className="pointer-events-none absolute inset-x-0 top-0 h-28 bg-[radial-gradient(circle_at_50%_0%,rgba(246,156,235,0.16),transparent_18rem)]" />
       <div className="mb-6 flex items-start justify-between gap-4">
         <div>
-          <p className="text-sm font-semibold text-cyan-200">Upload PDF</p>
-          <h1 className="mt-2 text-2xl font-bold text-white">Document intake</h1>
+          <p className="text-sm font-semibold text-[#F69CEB]">OCR intake</p>
+          <h1 className="mt-2 text-2xl font-bold text-white">OCR intake station</h1>
+          <p className="mt-2 max-w-sm text-sm leading-6 text-[#A7A7C7]">
+            Gemini OCR supports scanned/design PDFs. Clear files under 10MB work best.
+          </p>
         </div>
-        <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-blue-400/10 text-blue-100">
+        <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-[#BA3AD3]/10 text-[#F69CEB] shadow-glow">
           <FileUp className="h-5 w-5" />
         </div>
       </div>
@@ -231,9 +266,9 @@ export function UploadPanel({ onUploadComplete, onUploadFailed, documentName, to
         onDragLeave={() => setIsDragging(false)}
         onDrop={handleDrop}
         className={cn(
-          "cursor-pointer rounded-3xl border border-dashed border-white/15 bg-white/[0.035] p-6 text-center transition",
-          "hover:border-blue-300/50 hover:bg-blue-400/[0.06]",
-          isDragging && "border-cyan-300/70 bg-cyan-300/10 shadow-glow",
+          "cursor-pointer rounded-lg border border-dashed border-white/[0.15] bg-white/[0.035] p-6 text-center transition",
+          "hover:border-[#F69CEB]/50 hover:bg-[#BA3AD3]/[0.06]",
+          isDragging && "border-[#F69CEB]/70 bg-[#BA3AD3]/10 shadow-glow",
         )}
       >
         <input
@@ -244,16 +279,16 @@ export function UploadPanel({ onUploadComplete, onUploadFailed, documentName, to
           onChange={(event) => chooseFile(event.target.files?.[0])}
           disabled={isBusy}
         />
-        <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-3xl border border-blue-300/20 bg-blue-400/10 text-blue-100">
+        <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-lg border border-[#F69CEB]/20 bg-[#BA3AD3]/10 text-[#F69CEB]">
           <UploadCloud className="h-7 w-7" />
         </div>
         <p className="font-semibold text-white">Drag and drop a PDF here</p>
-        <p className="mt-2 text-sm text-slate-400">or click to select a file under 10MB</p>
-        <p className="mx-auto mt-3 max-w-sm text-xs leading-5 text-slate-500">
-          Best results: text-based PDFs exported from Word/Google Docs. Canva/design/scanned PDFs may need OCR.
+        <p className="mt-2 text-sm text-[#A7A7C7]">or click to select a file under 10MB</p>
+        <p className="mx-auto mt-3 max-w-sm text-xs leading-5 text-[#A7A7C7]/75">
+          Upload a PDF and let DocuMind build a searchable OCR knowledge layer.
         </p>
-        <p className="mx-auto mt-2 max-w-sm text-xs leading-5 text-slate-500">
-          MVP mode indexes first 5 readable chunks for faster demo.
+        <p className="mx-auto mt-2 max-w-sm text-xs leading-5 text-[#A7A7C7]/75">
+          Fast demo mode indexes the most relevant readable sections first.
         </p>
         <button
           type="button"
@@ -262,7 +297,7 @@ export function UploadPanel({ onUploadComplete, onUploadFailed, documentName, to
             openFileSelector()
           }}
           disabled={isBusy}
-          className="mt-5 inline-flex items-center justify-center gap-2 rounded-full border border-cyan-300/30 bg-cyan-300/10 px-4 py-2 text-sm font-semibold text-cyan-100 transition hover:border-cyan-200/60 hover:bg-cyan-300/15 disabled:opacity-50"
+          className="mt-5 inline-flex items-center justify-center gap-2 rounded-full border border-[#F69CEB]/30 bg-[#BA3AD3]/10 px-4 py-2 text-sm font-semibold text-[#F7D7F4] transition hover:border-[#F69CEB]/60 hover:bg-[#BA3AD3]/[0.15] disabled:opacity-50"
         >
           <FileUp className="h-4 w-4" />
           Upload PDF
@@ -270,9 +305,9 @@ export function UploadPanel({ onUploadComplete, onUploadFailed, documentName, to
       </div>
 
       {selectedFile ? (
-        <div className="mt-5 rounded-2xl border border-white/10 bg-white/[0.04] p-4">
+        <div className="mt-5 rounded-lg border border-white/[0.12] bg-white/[0.04] p-4">
           <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-cyan-300/10 text-cyan-100">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-[#BA3AD3]/10 text-[#F69CEB]">
               <FileText className="h-5 w-5" />
             </div>
             <div className="min-w-0 flex-1">
@@ -287,20 +322,20 @@ export function UploadPanel({ onUploadComplete, onUploadFailed, documentName, to
         type="button"
         onClick={handleUpload}
         disabled={!selectedFile || isBusy}
-        className="mt-5 inline-flex w-full items-center justify-center gap-2 rounded-full bg-white px-5 py-3 text-sm font-bold text-slate-950 shadow-glow transition hover:bg-cyan-100 disabled:opacity-50"
+        className="mt-5 inline-flex w-full items-center justify-center gap-2 rounded-full bg-white px-5 py-3 text-sm font-bold text-slate-950 shadow-[0_0_32px_rgba(246,156,235,0.28)] transition hover:bg-[#F7D7F4] hover:shadow-glow disabled:opacity-50"
       >
         {isBusy ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileUp className="h-4 w-4" />}
-        {isBusy ? "Processing PDF" : "Upload and embed PDF"}
+        {isBusy ? "Building OCR layer" : "Build OCR knowledge layer"}
       </button>
 
       <button
         type="button"
         onClick={handleDemoDocument}
         disabled={isBusy}
-        className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-full border border-cyan-300/30 bg-cyan-300/10 px-5 py-3 text-sm font-semibold text-cyan-100 transition hover:border-cyan-200/60 hover:bg-cyan-300/15 disabled:opacity-50"
+        className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-full border border-[#F69CEB]/30 bg-[#BA3AD3]/10 px-5 py-3 text-sm font-semibold text-[#F7D7F4] transition hover:border-[#F69CEB]/60 hover:bg-[#BA3AD3]/[0.15] disabled:opacity-50"
       >
         <FileText className="h-4 w-4" />
-        Use sample text document
+        Use sample OCR document
       </button>
 
       <div className="mt-6">
@@ -308,14 +343,14 @@ export function UploadPanel({ onUploadComplete, onUploadFailed, documentName, to
       </div>
 
       {error ? (
-        <div className="mt-5 flex gap-3 rounded-2xl border border-red-400/20 bg-red-500/10 p-4 text-sm leading-6 text-red-100">
+        <div className="mt-5 flex gap-3 rounded-lg border border-red-400/20 bg-red-500/10 p-4 text-sm leading-6 text-red-100">
           <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
           {error}
         </div>
       ) : null}
 
       {documentName && !error ? (
-        <div className="mt-5 rounded-2xl border border-emerald-300/20 bg-emerald-400/10 p-4">
+        <div className="mt-5 rounded-lg border border-emerald-300/20 bg-emerald-400/10 p-4">
           <div className="flex items-start gap-3">
             <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-emerald-200" />
             <div>
@@ -324,7 +359,7 @@ export function UploadPanel({ onUploadComplete, onUploadFailed, documentName, to
                 {totalChunks ? `${totalChunks} chunks stored and ready for retrieval.` : "Ready for document chat."}
               </p>
               {extractionMethod === "gemini-ocr" ? (
-                <p className="mt-1 text-xs text-emerald-100/80">Text extracted using Gemini OCR fallback.</p>
+                <p className="mt-1 text-xs text-emerald-100/80">Text extracted using Gemini OCR.</p>
               ) : null}
             </div>
           </div>

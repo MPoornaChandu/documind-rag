@@ -5,9 +5,9 @@ import { HashScrollController } from "@/components/HashScrollController"
 import "./globals.css"
 
 export const metadata: Metadata = {
-  title: "DocuMind RAG | PDF Chat with Source Citations",
+  title: "DocuMind RAG | OCR-powered PDF Chat",
   description:
-    "A premium full-stack RAG document chat app built with Next.js 14, Supabase pgvector, Gemini, and TypeScript.",
+    "An OCR-first RAG document chat app built with Next.js, Gemini OCR, Supabase pgvector, and TypeScript.",
 }
 
 export default function RootLayout({

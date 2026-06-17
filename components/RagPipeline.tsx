@@ -2,7 +2,7 @@
 
 import type { LucideIcon } from "lucide-react"
 import { motion } from "framer-motion"
-import { Bot, Database, FileUp, Layers3, ScanText, Search, Sparkles } from "lucide-react"
+import { Bot, Database, FileUp, Layers3, MessageSquareQuote, ScanText, Search, ShieldCheck } from "lucide-react"
 
 const steps: Array<{
   title: string
@@ -11,71 +11,77 @@ const steps: Array<{
 }> = [
   {
     title: "PDF Upload",
-    description: "The file lands in a node runtime route built for binary form data.",
+    description: "A PDF enters the secure server route for OCR intake and size validation.",
     icon: FileUp,
   },
   {
-    title: "Text Extraction",
-    description: "pdf-parse extracts searchable text and rejects scanned image PDFs cleanly.",
+    title: "Gemini OCR",
+    description: "Gemini OCR extracts readable text from PDFs, including scanned or designed pages when clear.",
     icon: ScanText,
   },
   {
+    title: "Text Cleaning",
+    description: "Unicode cleanup, spacing normalization, and control-character removal prepare text for storage.",
+    icon: ShieldCheck,
+  },
+  {
     title: "Chunking",
-    description: "Text is split into overlapping chunks with sentence-aware boundaries.",
+    description: "Readable sections are split into focused retrieval units with stable chunk metadata.",
     icon: Layers3,
   },
   {
-    title: "Embeddings",
-    description: "Gemini turns every passage into a 768-dimensional retrieval vector.",
+    title: "Gemini Embeddings",
+    description: "Each chunk becomes a 768-dimensional Gemini vector for semantic matching.",
     icon: Bot,
   },
   {
     title: "Supabase pgvector",
-    description: "Chunks and vectors are stored in Postgres with pgvector indexing.",
+    description: "Vectors and source text are stored in PostgreSQL with pgvector retrieval support.",
     icon: Database,
   },
   {
-    title: "Semantic Search",
-    description: "The question vector retrieves the most relevant private document chunks.",
+    title: "Semantic Retrieval",
+    description: "The question embedding finds the most relevant readable sections first.",
     icon: Search,
   },
   {
-    title: "Gemini Answer",
-    description: "The model answers only from retrieved context and returns sources.",
-    icon: Sparkles,
+    title: "Source-Grounded Answer",
+    description: "Gemini answers only from retrieved context and returns the supporting source chunks.",
+    icon: MessageSquareQuote,
   },
 ]
 
 export function RagPipeline() {
   return (
     <div className="relative">
-      <div className="pointer-events-none absolute left-6 top-6 hidden h-[calc(100%-3rem)] w-px bg-gradient-to-b from-blue-400 via-cyan-300 to-violet-400 opacity-60 lg:left-1/2 lg:block" />
-      <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-7">
+      <div className="pointer-events-none absolute left-1/2 top-12 hidden h-px w-[82%] -translate-x-1/2 bg-gradient-to-r from-transparent via-[#F69CEB]/50 to-transparent lg:block" />
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         {steps.map((step, index) => {
           const Icon = step.icon
 
           return (
             <motion.article
               key={step.title}
-              className="glow-border group relative rounded-3xl border border-white/10 bg-white/[0.05] p-6 backdrop-blur-xl transition duration-300 hover:-translate-y-1 hover:border-cyan-300/45 hover:bg-white/[0.08] xl:min-h-[18rem]"
+              className="glow-border group relative rounded-lg border border-white/[0.12] bg-white/[0.055] p-5 backdrop-blur-xl transition duration-300 hover:-translate-y-1 hover:border-[#F69CEB]/45 hover:bg-white/[0.08] xl:min-h-[17rem]"
               initial={{ opacity: 0, y: 28 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true, margin: "-100px" }}
               transition={{ duration: 0.55, delay: index * 0.06, ease: "easeOut" }}
             >
               {index < steps.length - 1 ? (
-                <div className="pointer-events-none absolute left-1/2 top-full h-5 w-px bg-gradient-to-b from-cyan-300/60 to-transparent md:left-full md:top-1/2 md:h-px md:w-5 md:bg-gradient-to-r xl:block" />
+                <div className="pointer-events-none absolute left-1/2 top-full h-4 w-px bg-gradient-to-b from-[#F69CEB]/55 to-transparent md:left-full md:top-1/2 md:h-px md:w-4 md:bg-gradient-to-r" />
               ) : null}
-              <div className="mb-5 flex items-center gap-4">
-                <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-blue-300/25 bg-blue-400/10 text-blue-100 shadow-[0_0_24px_rgba(59,130,246,0.18)]">
+
+              <div className="mb-5 flex items-center justify-between gap-4">
+                <div className="flex h-12 w-12 items-center justify-center rounded-lg border border-[#F69CEB]/25 bg-[#BA3AD3]/10 text-[#F69CEB] shadow-[0_0_24px_rgba(186,58,211,0.22)]">
                   <Icon className="h-5 w-5" />
                 </div>
-                <span className="rounded-full border border-white/10 bg-white/[0.05] px-3 py-1 text-xs font-medium text-slate-300">
-                  Step {index + 1}
+                <span className="rounded-full border border-white/[0.12] bg-black/25 px-3 py-1 text-xs font-semibold text-[#F7D7F4]">
+                  {String(index + 1).padStart(2, "0")}
                 </span>
               </div>
-              <h3 className="text-xl font-semibold text-white">{step.title}</h3>
-              <p className="mt-3 text-sm leading-6 text-slate-400">{step.description}</p>
+              <h3 className="text-lg font-semibold text-white">{step.title}</h3>
+              <p className="mt-3 text-sm leading-6 text-[#A7A7C7]">{step.description}</p>
             </motion.article>
           )
         })}

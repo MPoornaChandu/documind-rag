@@ -5,8 +5,8 @@ import { cn } from "@/lib/utils"
 
 const statusLabels: Partial<Record<UploadStatusType, string>> = {
   uploading: "Uploading PDF...",
-  extracting: "Extracting text...",
-  ocr: "Running Gemini OCR fallback...",
+  extracting: "Preparing PDF...",
+  ocr: "Running Gemini OCR...",
   chunking: "Splitting into chunks...",
   embedding: "Generating embeddings...",
   storing: "Storing vectors...",
@@ -27,8 +27,8 @@ export function UploadStatus({ status }: { status: UploadStatusType }) {
         className={cn(
           "flex h-7 w-7 items-center justify-center rounded-full border",
           isComplete
-            ? "border-emerald-300/40 bg-emerald-400/15 text-emerald-200"
-            : "border-cyan-300/40 bg-cyan-400/15 text-cyan-100",
+            ? "border-emerald-300/40 bg-emerald-400/[0.15] text-emerald-200"
+            : "border-[#F69CEB]/40 bg-[#BA3AD3]/[0.15] text-[#F7D7F4]",
         )}
       >
         {isComplete ? <CheckCircle2 className="h-4 w-4" /> : <Loader2 className="h-4 w-4 animate-spin" />}

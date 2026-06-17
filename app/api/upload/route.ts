@@ -10,7 +10,7 @@ export const runtime = "nodejs"
 export const maxDuration = 60
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024
-const MVP_CHUNK_LIMIT = 5
+const DEMO_CHUNK_LIMIT = 5
 const EMBEDDING_DIMENSIONS = 768
 
 type EmbeddedChunk = {
@@ -20,6 +20,51 @@ type EmbeddedChunk = {
 
 function jsonError(error: string, status = 400) {
   return NextResponse.json({ success: false, error }, { status })
+}
+
+function getErrorMessage(error: unknown) {
+  if (error instanceof Error) {
+    return error.message
+  }
+
+  return String(error)
+}
+
+function classifyUploadError(error: unknown) {
+  const message = getErrorMessage(error)
+
+  if (/gemini ocr timed out/i.test(message)) {
+    return {
+      message: "Gemini OCR timed out. Try a smaller or clearer PDF.",
+      status: 504,
+    }
+  }
+
+  if (/no readable|not readable enough|readable chunks/i.test(message)) {
+    return {
+      message: "No readable text could be extracted. Try a clearer PDF.",
+      status: 400,
+    }
+  }
+
+  if (/supabase|vector|embedding|insert|dimension|document_chunks|documents/i.test(message)) {
+    return {
+      message: "Vector storage failed. Please retry.",
+      status: 500,
+    }
+  }
+
+  if (/timed out|timeout|abort/i.test(message)) {
+    return {
+      message: "Upload took too long. Try a smaller PDF.",
+      status: 504,
+    }
+  }
+
+  return {
+    message: "Upload failed. Please try again.",
+    status: 500,
+  }
 }
 
 function isPdf(file: File) {
@@ -104,13 +149,7 @@ export async function POST(request: Request) {
     })
 
     if (!readable) {
-      return Response.json(
-        {
-          error:
-            "Gemini OCR extracted text, but it was not readable enough. Try a clearer PDF.",
-        },
-        { status: 400 },
-      )
+      return jsonError("No readable text could be extracted. Try a clearer PDF.")
     }
 
     const chunks = chunkText(extractedText)
@@ -125,15 +164,10 @@ export async function POST(request: Request) {
 
     console.log("UPLOAD_STAGE: clean chunks", cleanChunks.length)
 
-    const limitedChunks = cleanChunks.slice(0, MVP_CHUNK_LIMIT)
+    const limitedChunks = cleanChunks.slice(0, DEMO_CHUNK_LIMIT)
 
     if (limitedChunks.length === 0) {
-      return Response.json(
-        {
-          error: "No readable chunks could be created after OCR.",
-        },
-        { status: 400 },
-      )
+      return jsonError("No readable text could be extracted. Try a clearer PDF.")
     }
 
     const { supabase } = await import("@/lib/supabase")
@@ -162,12 +196,7 @@ export async function POST(request: Request) {
         code: documentError.code,
       })
 
-      return Response.json(
-        {
-          error: `Supabase document insert failed: ${documentError.message}`,
-        },
-        { status: 500 },
-      )
+      return jsonError("Vector storage failed. Please retry.", 500)
     }
 
     console.log("UPLOAD_STAGE: document inserted", document.id)
@@ -221,12 +250,7 @@ export async function POST(request: Request) {
 
         await supabase.from("documents").delete().eq("id", document.id)
 
-        return Response.json(
-          {
-            error: `Supabase chunks insert failed: ${chunksError.message}`,
-          },
-          { status: 500 },
-        )
+        return jsonError("Vector storage failed. Please retry.", 500)
       }
 
       console.log("UPLOAD_STAGE: chunks inserted")
@@ -251,13 +275,8 @@ export async function POST(request: Request) {
   } catch (error) {
     console.error("UPLOAD_ROUTE_ERROR", error)
 
-    const message = error instanceof Error ? error.message : "Upload failed"
+    const classified = classifyUploadError(error)
 
-    return Response.json(
-      {
-        error: message,
-      },
-      { status: 500 },
-    )
+    return jsonError(classified.message, classified.status)
   }
 }

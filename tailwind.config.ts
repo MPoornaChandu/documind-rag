@@ -9,12 +9,12 @@ const config = {
   theme: {
     extend: {
       boxShadow: {
-        glow: "0 0 40px rgba(59, 130, 246, 0.28)",
-        "violet-glow": "0 0 50px rgba(139, 92, 246, 0.26)",
+        glow: "0 0 42px rgba(186, 58, 211, 0.34)",
+        "violet-glow": "0 0 56px rgba(92, 20, 187, 0.34)",
       },
       backgroundImage: {
         "radial-grid":
-          "radial-gradient(circle at center, rgba(34, 211, 238, 0.12), transparent 28rem)",
+          "radial-gradient(circle at center, rgba(186, 58, 211, 0.14), transparent 28rem)",
       },
       animation: {
         "slow-float": "slow-float 8s ease-in-out infinite",

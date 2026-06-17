@@ -1,14 +1,12 @@
 import { cn } from "@/lib/utils"
 
 const techStack = [
+  "OCR",
   "RAG",
-  "Next.js 14",
+  "Gemini",
+  "Supabase pgvector",
+  "Next.js",
   "TypeScript",
-  "Gemini API",
-  "Supabase",
-  "pgvector",
-  "Tailwind CSS",
-  "Framer Motion",
 ]
 
 export function TechBadges({ className }: { className?: string }) {
@@ -17,7 +15,7 @@ export function TechBadges({ className }: { className?: string }) {
       {techStack.map((tech) => (
         <span
           key={tech}
-          className="rounded-full border border-white/10 bg-white/[0.06] px-4 py-2 text-sm font-medium text-slate-200 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] backdrop-blur-xl"
+          className="rounded-full border border-white/[0.12] bg-white/[0.06] px-4 py-2 text-sm font-medium text-slate-200 shadow-[inset_0_1px_0_rgba(255,255,255,0.08),0_0_24px_rgba(186,58,211,0.08)] backdrop-blur-xl"
         >
           {tech}
         </span>
